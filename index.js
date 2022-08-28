@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import router from "./routes/router.js";
 import cors from "cors";
+import WSS from "express-ws";
 
 const PORT = process.env.PORT || 5000;
 const DB_URL = `mongodb+srv://whatMeme:MEstb2VWB7Zm8Gt5@cluster0.39nekth.mongodb.net/MemeBase?retryWrites=true&w=majority`;
