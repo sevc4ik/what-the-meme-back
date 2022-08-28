@@ -12,6 +12,10 @@ app.use(express.json());
 app.use(cors())
 app.use("/api", router);
 
+
+const WSServer = WSS(app);
+const aWss = WSServer.getWss();
+
 async function startApp() {
   try {
     await mongoose.connect(DB_URL, {
@@ -23,5 +27,32 @@ async function startApp() {
     console.log(e);
   }
 }
+
+app.ws("/", (ws, req) => {
+  ws.on("message", (msg) => {
+    msg = JSON.parse(msg);
+    switch (msg.method) {
+      case "connection":
+        connectionHandler(ws, msg);
+        break;
+      case "message":
+        broadcastConnection(ws, msg);
+        break;
+    }
+  });
+});
+
+const connectionHandler = (ws, msg) => {
+  ws.id = msg.id;
+  broadcastConnection(ws, msg);
+};
+
+const broadcastConnection = (ws, msg) => {
+  aWss.clients.forEach((client) => {
+    if (client.id === msg.id) {
+      client.send(JSON.stringify(msg));
+    }
+  });
+};
 
 startApp();
