@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
-const Meme = new mongoose.Schema({
+export const Meme = new mongoose.Schema({
+  _id: {type: String},
   link: {type: String, required: true},
 })
 
