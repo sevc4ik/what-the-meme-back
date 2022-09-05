@@ -52,6 +52,9 @@ app.ws("/", (ws, req) => {
         case "start":
           handlerStart(ws, msg);
           break;
+          case "meme":
+            memeHandler(ws, msg);
+            break;
       }
     }
   });
@@ -64,6 +67,93 @@ app.ws("/", (ws, req) => {
     }
   });
 });
+
+const getCurrentClientMemeData = (arr, searchId) => {
+  let currentClientMemeIndex;
+
+  const currentMemeClient = arr.filter((client, index) => {
+    if (searchId === client.id) {
+      currentClientMemeIndex = index;
+      return true;
+    } else {
+      return false;
+    }
+  });
+
+  const resultData = {
+    currentMemeClient,
+    currentClientMemeIndex,
+  };
+
+  return resultData;
+};
+
+const getCurrentClientScoreData = (arr, searchId) => {
+  let currentScoreClientIndex;
+
+  const currentScoreClient = arr.filter((client, index) => {
+    if (searchId === client.id) {
+      currentScoreClientIndex = index;
+      return true;
+    } else {
+      return false;
+    }
+  });
+
+  const resultData = {
+    currentScoreClient,
+    currentScoreClientIndex,
+  };
+
+  return resultData;
+};
+
+const getCurrentUserData = (arr, searchId) => {
+  let currentUserIndex;
+  const currentUser = arr.filter((client, index) => {
+    if (searchId === client.id) {
+      currentUserIndex = index;
+      return true;
+    } else {
+      return false;
+    }
+  });
+
+  const resultData = {
+    currentUser,
+    currentUserIndex,
+  };
+
+  return resultData;
+};
+
+const memeHandler = async (ws, msg) => {
+  const memeUrl = msg.content;
+  const roomId = msg.id;
+  const userId = msg.user;
+
+  if (memeUrl) {
+    const { currentClientMemeIndex, currentMemeClient } =
+      getCurrentClientMemeData(clientsMemeData, roomId);
+
+    if (currentMemeClient.length) {
+      clientsMemeData[currentClientMemeIndex].userMemePick.push({
+        _id: userId,
+        link: memeUrl,
+      });
+    } else {
+      clientsMemeData.push({
+        id: roomId,
+        userMemePick: [
+          {
+            _id: userId,
+            link: memeUrl,
+          },
+        ],
+      });
+    }
+  }
+};
 
 const handlerStart = async (ws, msg) => {
   const roomId = msg.id;
