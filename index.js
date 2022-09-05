@@ -5,8 +5,16 @@ import cors from "cors";
 import WSS from "express-ws";
 
 import RoomService from "./service/roomService.js";
+import UserService from "./service/userService.js";
+import { getRandomArraylement } from "./utils/random.js";
+import { situations } from "./utils/consts.js";
 import { handlerDisconnectChat } from "./websocket/chat.js";
-import { updateRoomState, getRoomMembers } from "./websocket/room.js";
+import { deletUserFromRoom } from "./websocket/user.js";
+import {
+  updateRoomState,
+  getRoomMembers,
+  updateGameState,
+} from "./websocket/room.js";
 import { handleGameState } from "./websocket/state.js";
 import { updateSituation } from "./websocket/situation.js";
 
@@ -195,6 +203,20 @@ const scoreHandler = async (ws, msg) => {
   }
 };
 
+const connectionHandler = async (ws, msg) => {
+  const roomId = msg.id;
+  ws.id = roomId;
+  ws.isReady = false;
+
+  broadcastConnection(ws, msg);
+
+  const members = await getRoomMembers(roomId);
+
+  if (getAmountConnectedWSById(roomId) === members) {
+    startGame(roomId, ws);
+  }
+};
+
 const handlerStart = async (ws, msg) => {
   const roomId = msg.id;
   ws.isReady = true;
@@ -204,17 +226,47 @@ const handlerStart = async (ws, msg) => {
   }
 };
 
-const connectionHandler = (ws, msg) => {
-  ws.id = msg.id;
-  broadcastConnection(ws, msg);
+export const getAmountConnectedWSById = (roomId) => {
+  let amount = 0;
+
+  aWss.clients.forEach((client) => {
+    if (client.id === roomId) {
+      amount++;
+    }
+  });
+  return amount;
 };
 
-const broadcastConnection = (ws, msg) => {
+const checkIfReadytoStart = (roomId) => {
+  let amount = 0;
+  let isReadyAmount = 0;
+
+  aWss.clients.forEach((client) => {
+    if (client.id === roomId) {
+      amount++;
+      if (client.isReady === true) {
+        isReadyAmount++;
+      }
+    }
+  });
+  return amount === isReadyAmount && isReadyAmount >= 2;
+};
+
+export const broadcastConnection = (ws, msg) => {
   aWss.clients.forEach((client) => {
     if (client.id === msg.id) {
       client.send(JSON.stringify(msg));
     }
   });
+};
+
+const startGame = async (roomId, ws) => {
+  await updateRoomState(roomId, "IsGoing");
+  setTimeout(async () => {
+    await handleGameState(roomId, "Выберите мем", ws);
+    await updateSituation(ws, roomId);
+    memeSelectTimer(roomId, 15, ws, "Выберите мем");
+  }, 2000);
 };
 
 const memeSelectTimer = async (roomId, seconds, ws, state) => {
@@ -241,12 +293,12 @@ const memeSelectTimer = async (roomId, seconds, ws, state) => {
 
             await RoomService.updateRoom(roomId, { gameProgress });
             await handleGameState(roomId, "Считаем баллы", ws);
-            memeSelectTimer(roomId, 5, ws, "Считаем баллы");
+            memeSelectTimer(roomId, 3, ws, "Считаем баллы");
             break;
           }
           case "Выберите мем": {
             await handleGameState(roomId, "Собираем мемы", ws);
-            memeSelectTimer(roomId, 2, ws, "Собираем мемы");
+            memeSelectTimer(roomId, 3, ws, "Собираем мемы");
             break;
           }
           case "Считаем баллы": {
@@ -278,7 +330,7 @@ const memeSelectTimer = async (roomId, seconds, ws, state) => {
             }
 
             await handleGameState(roomId, "Следующий раунд стартует через", ws);
-            memeSelectTimer(roomId, 4, ws, "Следующий раунд стартует через");
+            memeSelectTimer(roomId, 5, ws, "Следующий раунд стартует через");
             break;
           }
           case "Результаты": {
@@ -302,8 +354,7 @@ const memeSelectTimer = async (roomId, seconds, ws, state) => {
               });
             }
             await handleGameState(roomId, "Голосование", ws);
-            await updateSituation(ws, roomId);
-            memeSelectTimer(roomId, 6, ws, "Голосование");
+            memeSelectTimer(roomId, 20, ws, "Голосование");
             break;
           }
           case "Следующий раунд стартует через": {
@@ -316,8 +367,9 @@ const memeSelectTimer = async (roomId, seconds, ws, state) => {
               clientsScoreData[currentScoreClientIndex].userScore.length = 0;
             }
             await RoomService.updateRoom(roomId, { gameProgress });
+            await updateSituation(ws, roomId);
             await handleGameState(roomId, "Выберите мем", ws);
-            memeSelectTimer(roomId, 7, ws, "Выберите мем");
+            memeSelectTimer(roomId, 15, ws, "Выберите мем");
             break;
           }
         }
@@ -330,6 +382,15 @@ const memeSelectTimer = async (roomId, seconds, ws, state) => {
     }
   }, 1000);
   let time = seconds;
+};
+
+const createObjTimer = (roomId, time) => {
+  const timer = {
+    id: roomId,
+    method: "timer",
+    content: time,
+  };
+  return timer;
 };
 
 startApp();
