@@ -29,7 +29,7 @@ class RoomService {
     try {
       const room = await Room.findById(id).exec();
       await room.delete();
-      return 'room deleted';
+      return "room deleted";
     } catch {
       throw new Error("ID doesn't exist");
     }
@@ -42,8 +42,9 @@ class RoomService {
 
   async getEmptyRooms() {
     const rooms = await Room.find();
-    const filteredRoom = rooms.filter((room) => room.users.length < room.members);
-
+    const filteredRoom = rooms.filter((room) => {
+      return room.users.length < room.members && room.roomState === "IsOpen";
+    });
     return filteredRoom;
   }
 }
