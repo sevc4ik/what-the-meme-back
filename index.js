@@ -49,6 +49,9 @@ app.ws("/", (ws, req) => {
         case "message":
           broadcastConnection(ws, msg);
           break;
+        case "start":
+          handlerStart(ws, msg);
+          break;
       }
     }
   });
@@ -61,6 +64,15 @@ app.ws("/", (ws, req) => {
     }
   });
 });
+
+const handlerStart = async (ws, msg) => {
+  const roomId = msg.id;
+  ws.isReady = true;
+
+  if (checkIfReadytoStart(roomId)) {
+    startGame(roomId, ws);
+  }
+};
 
 const connectionHandler = (ws, msg) => {
   ws.id = msg.id;
