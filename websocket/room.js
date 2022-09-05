@@ -22,7 +22,5 @@ export const updateGameState = async (roomId, newState) => {
     const updatedRoom = await RoomService.updateRoom(roomId, {
       gameState: newState,
     });
-  } else {
-    console.log(roomId, newState);
   }
 };
