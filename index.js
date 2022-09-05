@@ -52,9 +52,12 @@ app.ws("/", (ws, req) => {
         case "start":
           handlerStart(ws, msg);
           break;
-          case "meme":
-            memeHandler(ws, msg);
-            break;
+        case "meme":
+          memeHandler(ws, msg);
+          break;
+        case "score":
+          scoreHandler(ws, msg);
+          break;
       }
     }
   });
@@ -152,6 +155,43 @@ const memeHandler = async (ws, msg) => {
         ],
       });
     }
+  }
+};
+
+const scoreHandler = async (ws, msg) => {
+  const userScore = msg.content;
+  const roomId = msg.id;
+  const userId = msg.user;
+
+  const { currentScoreClientIndex, currentScoreClient } =
+    getCurrentClientScoreData(clientsScoreData, roomId);
+
+  if (currentScoreClient.length) {
+    const { currentUser, currentUserIndex } = getCurrentUserData(
+      clientsScoreData[currentScoreClientIndex].userScore,
+      userId
+    );
+
+    if (currentUser.length) {
+      clientsScoreData[currentScoreClientIndex].userScore[
+        currentUserIndex
+      ].score += Number(userScore);
+    } else {
+      clientsScoreData[currentScoreClientIndex].userScore.push({
+        id: userId,
+        score: Number(userScore),
+      });
+    }
+  } else {
+    clientsScoreData.push({
+      id: roomId,
+      userScore: [
+        {
+          id: userId,
+          score: Number(userScore),
+        },
+      ],
+    });
   }
 };
 
